@@ -7,14 +7,21 @@ import (
 	"cosmossdk.io/simapp/params"
 	amino "github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/codec/types"
-	"github.com/cosmos/cosmos-sdk/types/module"
+	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/x/auth/tx"
+	"github.com/ethereum/go-ethereum/common"
 
 	authtypes "github.com/cosmos/cosmos-sdk/x/auth/types"
 	"github.com/evmos/evmos/v14/app"
+	"github.com/evmos/evmos/v14/cmd/config"
+	"github.com/evmos/evmos/v14/crypto/ethsecp256k1"
 	enccodec "github.com/evmos/evmos/v14/encoding/codec"
 	"google.golang.org/grpc"
 )
+
+const PRIV_KEY = "710145C4E48A4F31F00E5FEE3849ED816E5E06E6239947199E658AAA816285AA"
+const addr2 = "evmos15r9hnaeflmzse5nzpnz2nffs4vfe6xgdr5q330"
 
 func main() {
 	grpcConn, err := grpc.Dial(
@@ -26,6 +33,25 @@ func main() {
 	}
 	defer grpcConn.Close()
 
+	sender, _ := generateSenderAccount()
+
+	accSeq, err := GetSequence(context.Background(), *grpcConn, sender.String())
+	if err != nil {
+		return
+	}
+
+    fmt.Println("Sequence: ", accSeq)
+}
+
+func generateSenderAccount() (accAddr sdktypes.AccAddress, priv cryptotypes.PrivKey) {
+	privKey := &ethsecp256k1.PrivKey{
+		Key: common.FromHex(PRIV_KEY),
+	}
+
+	sdktypes.GetConfig().SetBech32PrefixForAccount(config.Bech32Prefix, "")
+	addr1 := privKey.PubKey().Address()
+	sender := sdktypes.AccAddress(addr1)
+	return sender, privKey
 }
 
 func GetSequence(ctx context.Context, gcConn grpc.ClientConn, addr string) (uint64, error) {
